@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Checklist Nutrition</title>
+  <title>Niveau 1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Firebase App (the core Firebase SDK) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -23,12 +23,23 @@
       width: 500px;
       max-width: 90vw;
     }
+    .table-title {
+      background: #003366;
+      color: #fff;
+      padding: 24px 0 24px 0;
+      text-align: center;
+      font-size: 2em;
+      font-weight: bold;
+      border-radius: 10px 10px 0 0;
+      letter-spacing: 1px;
+      margin-bottom: 0;
+    }
     table {
       border-collapse: collapse;
       margin: 0 auto;
       background: #fff;
       box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-      border-radius: 10px;
+      border-radius: 0 0 10px 10px;
       overflow: hidden;
       width: 100%;
     }
@@ -89,6 +100,7 @@
 </head>
 <body>
   <div class="container">
+    <div class="table-title">Niveau 1</div>
     <table id="checklistTable">
       <tbody id="tableBody">
         <!-- JS will populate rows here -->
