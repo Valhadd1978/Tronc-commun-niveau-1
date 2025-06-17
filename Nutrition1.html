@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Collaborative Checklist – Niveau 6</title>
+  <title>Checklist Nutrition</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Firebase App (the core Firebase SDK) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -12,93 +12,84 @@
       min-height: 100vh;
       margin: 0;
       padding: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #fff;
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      background: #f8f9fa;
       display: flex;
       align-items: center;         /* vertical center */
       justify-content: flex-end;   /* horizontal right */
     }
-
     .container {
-      margin-right: 5vw; /* optional: some space from the right edge */
-      width: 50vw;
-      max-width: 650px;
+      margin-right: 5vw; /* some space from the right edge */
+      width: 500px;
+      max-width: 90vw;
     }
-
-    .styled-table {
+    table {
       border-collapse: collapse;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+      border-radius: 10px;
+      overflow: hidden;
       width: 100%;
-      background: #fff;
-      table-layout: fixed;
     }
-
-    .styled-table.no-borders th,
-    .styled-table.no-borders td {
-      border: none !important;
-      padding: 16px 12px;
-      font-size: 22px;
-      background: #fff;
-      vertical-align: top;
-    }
-
-    .num {
-      font-weight: bold;
-      margin-right: 5px;
-      font-size: 22px;
-      vertical-align: middle;
-    }
-
-    /* Mini Toggle Styles */
-    .mini-switch {
-      display: inline-block;
+    td {
+      padding: 20px 28px;
+      text-align: left;
+      min-width: 180px;
+      border-bottom: 1px solid #e6e6e6;
       position: relative;
-      width: 34px;
-      height: 22px;
-      margin-right: 7px;
-      vertical-align: middle;
+      font-size: 22px;
     }
-    .mini-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
+    tr:last-child td {
+      border-bottom: none;
     }
-    .mini-slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: #e74c3c;
-      border-radius: 18px;
-      transition: background 0.3s;
-    }
-    .mini-slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 2px;
-      bottom: 2px;
-      background: #fff;
-      transition: 0.3s;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.13);
-    }
-    .mini-switch input:checked + .mini-slider {
-      background: #4CAF50;
-    }
-    .mini-switch input:checked + .mini-slider:before {
-      transform: translateX(12px);
-    }
-    /* Highlight checked row */
     .achieved {
       background: #c4f2c2 !important;
       color: #206620 !important;
       transition: background 0.3s, color 0.3s;
     }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      vertical-align: middle;
+      margin-right: 14px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    input:checked + .slider {
+      background: #4CAF50;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+    .label-text {
+      margin-left: 10px;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <table class="styled-table no-borders">
+    <table id="checklistTable">
       <tbody id="tableBody">
         <!-- JS will populate rows here -->
       </tbody>
@@ -118,10 +109,10 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Define your checklist items (add as many as you need)
+    // Define your checklist items (add more as needed)
     const checklist = [
       "Répondre à l’invitation du nutritionniste du sport pour se présenter.",
-      // Add more items as needed...
+      // Add more items here as needed...
     ];
 
     const tableBody = document.getElementById('tableBody');
@@ -132,24 +123,12 @@
       if (!item || item.trim() === "") continue;
 
       const tr = document.createElement('tr');
-      // Left cell blank
-      const tdLeft = document.createElement('td');
-      tdLeft.style.width = "50%";
-      tr.appendChild(tdLeft);
-
-      // Right cell with switch and text
-      const tdRight = document.createElement('td');
-      tdRight.style.width = "50%";
-      tdRight.id = `cell-${i}`;
-
-      // Number
-      const num = document.createElement('span');
-      num.className = "num";
-      num.textContent = (i + 1) + ".";
+      const td = document.createElement('td');
+      td.id = `cell-${i}`;
 
       // Switch
       const label = document.createElement('label');
-      label.className = "mini-switch";
+      label.className = "switch";
       label.setAttribute('aria-label', `Toggle ${i + 1}`);
 
       const input = document.createElement('input');
@@ -157,7 +136,7 @@
       input.id = `toggle-${i}`;
 
       const slider = document.createElement('span');
-      slider.className = "mini-slider";
+      slider.className = "slider";
 
       label.appendChild(input);
       label.appendChild(slider);
@@ -169,19 +148,18 @@
 
       // Text
       const spanText = document.createElement('span');
-      spanText.textContent = " " + item;
+      spanText.className = "label-text";
+      spanText.textContent = item;
 
-      tdRight.appendChild(num);
-      tdRight.appendChild(label);
-      tdRight.appendChild(spanText);
+      td.appendChild(label);
+      td.appendChild(spanText);
 
-      tr.appendChild(tdRight);
-
+      tr.appendChild(td);
       tableBody.appendChild(tr);
     }
 
     // Listen for updates from Firebase
-    db.ref('niveau6').on('value', (snapshot) => {
+    db.ref('nutrition1').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let i = 0; i < checklist.length; i++) {
         if (!checklist[i] || checklist[i].trim() === "") continue;
@@ -198,7 +176,7 @@
 
     // Update Firebase when toggled
     function updateItem(idx, value) {
-      db.ref(`niveau6/${idx}`).set(value);
+      db.ref(`nutrition1/${idx}`).set(value);
     }
   </script>
 </body>
