@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Collaborative Checklist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 16px 24px;
+      text-align: left;
+      min-width: 180px;
+      border-bottom: 1px solid #e6e6e6;
+    }
+    th {
+      background: #003366;
+      color: #fff;
+      font-size: 1.14em;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .achieved {
+      background: #c4f2c2 !important;
+      color: #206620 !important;
+      transition: background 0.3s, color 0.3s;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      vertical-align: middle;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    input:checked + .slider {
+      background: #4CAF50;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+    td {
+      position: relative;
+    }
+    .label-text {
+      margin-left: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Niveau 5</h1>
+  <table id="checklistTable">
+    <thead>
+      <tr>
+        <th>Fondement de l’entraînement</th>
+        <th>Camps, compétitions et vie d’équipe</th>
+        <th>Équipement</th>
+        <th>Travail avec l’équipe de soutien</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
+      authDomain: "tronc-commun-niveau-1.firebaseapp.com",
+      databaseURL: "https://tronc-commun-niveau-1-default-rtdb.firebaseio.com",
+      projectId: "tronc-commun-niveau-1",
+      storageBucket: "tronc-commun-niveau-1.appspot.com",
+      messagingSenderId: "360067485567",
+      appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const checklist = [
+      [
+        "1. Contribuer à la création des YTPs et IPPs.", 
+        "1. Adapter de façon proactive et appropriée les plans de préparation pré-course en fonction des épreuves et du contexte.", 
+        "1. Avoir un positionnement favorisant la performance de pointe dans chacune des épreuves.", 
+        "1. Collaborer et participer activement à la planification des interventions avec les membres du PSRI."
+      ],
+      [
+        "2. Contribuer à l’avancement des connaissances en prenant part à des méthodes d’entraînement innovantes, lorsque pertinent.", 
+        "2. Mettre en place des stratégies avancées d’activation (mentales et physiques).", 
+        "2. Optimiser l’équipement pour la performance de pointe.", 
+        "2. Maximiser l’utilisation des intervenants à la maison et contribuer à l’échange d’informations entre l’équipe « maison » et l’équipe de Cyclisme Canada."
+      ],
+      [
+        "", 
+        "3. Ajuster les techniques et stratégies de course au contexte et aux situations de course.", 
+        "", 
+        ""
+      ],
+      [
+        "", 
+        "3. Agir comme mentor pour les athlètes en développement.", 
+        "", 
+        ""
+      ],
+    ];
+
+    const tableBody = document.getElementById('tableBody');
+    let renderedRows = []; // map of visible row indexes to checklist row indexes
+
+    function renderTable() {
+      tableBody.innerHTML = "";
+      renderedRows = [];
+      for (let rowIdx = 0; rowIdx < checklist.length; rowIdx++) {
+        if (!checklist[rowIdx].some(item => item && item.trim() !== "")) continue;
+        renderedRows.push(rowIdx);
+        const tr = document.createElement('tr');
+        for (let colIdx = 0; colIdx < 4; colIdx++) {
+          const td = document.createElement('td');
+          td.id = `cell-${rowIdx}-${colIdx}`;
+          const itemText = checklist[rowIdx][colIdx];
+          if (itemText && itemText.trim() !== "") {
+            // Switch
+            const label = document.createElement('label');
+            label.className = "switch";
+            const input = document.createElement('input');
+            input.type = "checkbox";
+            input.id = `toggle-${rowIdx}-${colIdx}`;
+            const span = document.createElement('span');
+            span.className = "slider";
+            label.appendChild(input);
+            label.appendChild(span);
+            td.appendChild(label);
+
+            // Label text
+            const text = document.createElement('span');
+            text.className = "label-text";
+            text.textContent = itemText;
+            td.appendChild(text);
+
+            // Event
+            input.addEventListener('change', function() {
+              updateItem(rowIdx, colIdx, input.checked);
+            });
+          } else {
+            td.textContent = "";
+          }
+          tr.appendChild(td);
+        }
+        tableBody.appendChild(tr);
+      }
+    }
+
+    renderTable();
+
+    // Firebase: Listen for updates
+    db.ref('checklist').on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      for (const rowIdx of renderedRows) {
+        for (let col = 0; col < 4; col++) {
+          const itemText = checklist[rowIdx][col];
+          if (itemText && itemText.trim() !== "") {
+            const box = document.getElementById(`toggle-${rowIdx}-${col}`);
+            const td = document.getElementById(`cell-${rowIdx}-${col}`);
+            if (box && td) {
+              const checked = data?.[rowIdx]?.[col] || false;
+              box.checked = checked;
+              if (checked) {
+                td.classList.add('achieved');
+              } else {
+                td.classList.remove('achieved');
+              }
+            }
+          }
+        }
+      }
+    });
+
+    function updateItem(row, col, value) {
+      db.ref(`checklist/${row}/${col}`).set(value);
+    }
+  </script>
+</body>
+</html>
