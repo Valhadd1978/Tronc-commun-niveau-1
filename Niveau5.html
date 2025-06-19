@@ -185,8 +185,8 @@
 
     renderTable();
 
-    // Firebase: Listen for updates
-    db.ref('checklist').on('value', (snapshot) => {
+    // Firebase: Listen for updates (unique path for Niveau 5)
+    db.ref('niveau5').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (const rowIdx of renderedRows) {
         for (let col = 0; col < 4; col++) {
@@ -209,7 +209,7 @@
     });
 
     function updateItem(row, col, value) {
-      db.ref(`checklist/${row}/${col}`).set(value);
+      db.ref(`niveau5/${row}/${col}`).set(value);
     }
   </script>
 </body>
