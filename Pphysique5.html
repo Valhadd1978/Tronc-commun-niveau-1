@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Niveau 1</title>
+  <title>Niveau 5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Firebase App (the core Firebase SDK) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -173,8 +173,8 @@
       tableBody.appendChild(tr);
     }
 
-    // Listen for updates from Firebase
-    db.ref('nutrition1').on('value', (snapshot) => {
+    // Listen for updates from Firebase using a unique path for this checklist
+    db.ref('preparationphysique5').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let i = 0; i < checklist.length; i++) {
         if (!checklist[i] || checklist[i].trim() === "") continue;
@@ -189,16 +189,10 @@
       }
     });
 
-    // Update Firebase when toggled
+    // Update Firebase when toggled using the same unique path
     function updateItem(idx, value) {
-      db.ref(`nutrition1/${idx}`).set(value);
+      db.ref(`preparationphysique5/${idx}`).set(value);
     }
   </script>
 </body>
 </html>
-
-
-
-
-
-
