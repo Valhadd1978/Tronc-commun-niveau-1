@@ -101,7 +101,6 @@
     </tbody>
   </table>
   <script>
-    // --- CORRECT Firebase config, DO NOT duplicate, DO NOT add extra curly braces ---
     const firebaseConfig = {
       apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
       authDomain: "tronc-commun-niveau-1.firebaseapp.com",
@@ -111,11 +110,9 @@
       messagingSenderId: "360067485567",
       appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
     };
- 
-    // Initialize Firebase (using compat syntax!)
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
- 
+
     // Define your checklist items
     const checklist = [
       [
@@ -137,10 +134,10 @@
         ""
       ],
     ];
- 
+
     // Generate table
     const tableBody = document.getElementById('tableBody');
- 
+
     function createRow(rowIdx) {
       const tr = document.createElement('tr');
       for (let colIdx = 0; colIdx < 4; colIdx++) {
@@ -148,14 +145,13 @@
         td.id = `cell-${rowIdx}-${colIdx}`;
         const itemText = checklist[rowIdx][colIdx];
 
-        if (itemText) { // Only create switch if there is content
+        if (itemText) {
           // Switch
           const label = document.createElement('label');
           label.className = "switch";
           const input = document.createElement('input');
           input.type = "checkbox";
           input.id = `toggle-${rowIdx}-${colIdx}`;
-          // Value will be set by Firebase listener later
           const span = document.createElement('span');
           span.className = "slider";
           label.appendChild(input);
@@ -173,22 +169,19 @@
             updateItem(rowIdx, colIdx, input.checked);
           });
         } else {
-          // If no item, leave cell empty or add a placeholder if you wish
           td.textContent = "";
         }
-
         tr.appendChild(td);
       }
       return tr;
     }
- 
-    // Render all rows
+
     for (let row = 0; row < checklist.length; row++) {
       tableBody.appendChild(createRow(row));
     }
- 
-    // Firebase: Listen for updates
-    db.ref('checklist').on('value', (snapshot) => {
+
+    // Firebase: Listen for updates (use a unique path for Niveau 2!)
+    db.ref('niveau2').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let row = 0; row < checklist.length; row++) {
         for (let col = 0; col < 4; col++) {
@@ -207,10 +200,10 @@
         }
       }
     });
- 
-    // Update Firebase when toggled
+
+    // Update Firebase when toggled (use unique path)
     function updateItem(row, col, value) {
-      db.ref(`checklist/${row}/${col}`).set(value);
+      db.ref(`niveau2/${row}/${col}`).set(value);
     }
   </script>
 </body>
