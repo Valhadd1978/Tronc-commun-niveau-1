@@ -191,8 +191,8 @@
       tableBody.appendChild(createRow(row));
     }
 
-    // Firebase: Listen for updates
-    db.ref('checklist').on('value', (snapshot) => {
+    // Firebase: Listen for updates (unique path for Niveau 3)
+    db.ref('niveau3').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let row = 0; row < checklist.length; row++) {
         for (let col = 0; col < 4; col++) {
@@ -212,9 +212,9 @@
       }
     });
 
-    // Update Firebase when toggled
+    // Update Firebase when toggled (unique path for Niveau 3)
     function updateItem(row, col, value) {
-      db.ref(`checklist/${row}/${col}`).set(value);
+      db.ref(`niveau3/${row}/${col}`).set(value);
     }
   </script>
 </body>
