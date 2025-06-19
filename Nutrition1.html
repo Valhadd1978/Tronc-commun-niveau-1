@@ -170,7 +170,7 @@
       tableBody.appendChild(tr);
     }
 
-    // Listen for updates from Firebase
+    // Listen for updates from Firebase using a unique path for this checklist
     db.ref('nutrition1').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let i = 0; i < checklist.length; i++) {
@@ -186,7 +186,7 @@
       }
     });
 
-    // Update Firebase when toggled
+    // Update Firebase when toggled using the same unique path
     function updateItem(idx, value) {
       db.ref(`nutrition1/${idx}`).set(value);
     }
