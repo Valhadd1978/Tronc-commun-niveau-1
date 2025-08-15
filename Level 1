@@ -86,7 +86,7 @@
   </style>
 </head>
 <body>
-  <h1>Niveau 1</h1>
+  <h1>Level 1</h1>
   <table id="checklistTable">
     <thead>
       <tr>
