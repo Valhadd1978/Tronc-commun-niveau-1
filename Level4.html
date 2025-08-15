@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Collaborative Checklist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 16px 24px;
+      text-align: left;
+      min-width: 180px;
+      border-bottom: 1px solid #e6e6e6;
+    }
+    th {
+      background: #003366;
+      color: #fff;
+      font-size: 1.14em;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .achieved {
+      background: #c4f2c2 !important;
+      color: #206620 !important;
+      transition: background 0.3s, color 0.3s;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      vertical-align: middle;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    input:checked + .slider {
+      background: #4CAF50;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+    td {
+      position: relative;
+    }
+    .label-text {
+      margin-left: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Level 4</h1>
+  <table id="checklistTable">
+    <thead>
+      <tr>
+        <th>Training Fondamentals</th>
+        <th>Camps, Competitions and Team Life</th>
+        <th>Equipment</th>
+        <th>Working with the Support Team (PSRI)</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <!-- JS will populate rows here -->
+    </tbody>
+  </table>
+  <script>
+    // --- CORRECT Firebase config, DO NOT duplicate, DO NOT add extra curly braces ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
+      authDomain: "tronc-commun-niveau-1.firebaseapp.com",
+      databaseURL: "https://tronc-commun-niveau-1-default-rtdb.firebaseio.com",
+      projectId: "tronc-commun-niveau-1",
+      storageBucket: "tronc-commun-niveau-1.appspot.com",
+      messagingSenderId: "360067485567",
+      appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
+    };
+
+    // Initialize Firebase (using compat syntax!)
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Define your checklist items
+    const checklist = [
+      [
+        "1. Demonstrate adaptability and proactivity in training (understand and adapt training sessions, provide relevant feedback after the session).", 
+        "1. Adapt and optimize pre-race preparation plans, including mental preparation, activation, warm-up, nutritional strategies, and planned interactions before or after competitions.", 
+        "1. Identify equipment components that could improve performance.", 
+        "1. Be proactive in communication with the coach and PSRI members :\n- Anticipate potential disruptions.\n- Recognize warning signs and know who to contact and when.\n- Ensure communication between at-home providers and PSRI."
+      ],
+      [
+        "2. Master the YTP and IPP, understand mesocycle objectives, and participate in training analysis with the coach.", 
+        "2. Demonstrate the expected behaviours during camps and competitions.", 
+        "2. Optimize bike position for events through advanced fitting, including aerodynamic testing when available.", 
+        "2. Build a strong at-home performance team (massage therapist, physiotherapist, mechanic, etc.)."
+      ],
+      [
+        "3. Participate in regular physiological and neuromuscular evaluations to individualize training based on test results and training data.", 
+        "3. Develop advanced techniques (e.g., competitive aerodynamic position) and race strategies (e.g., optimal pacing models for individual events).", 
+        "", 
+        ""
+      ],
+    ];
+
+    // Generate table
+    const tableBody = document.getElementById('tableBody');
+
+    function createRow(rowIdx) {
+      // Only create a row if at least one column in the row has an item
+      const hasItem = checklist[rowIdx].some(item => item && item.trim() !== "");
+      if (!hasItem) return null;
+
+      const tr = document.createElement('tr');
+      for (let colIdx = 0; colIdx < 4; colIdx++) {
+        const td = document.createElement('td');
+        td.id = `cell-${rowIdx}-${colIdx}`;
+        const itemText = checklist[rowIdx][colIdx];
+        if (itemText && itemText.trim() !== "") {
+          // Switch
+          const label = document.createElement('label');
+          label.className = "switch";
+          const input = document.createElement('input');
+          input.type = "checkbox";
+          input.id = `toggle-${rowIdx}-${colIdx}`;
+          // Value will be set by Firebase listener later
+          const span = document.createElement('span');
+          span.className = "slider";
+          label.appendChild(input);
+          label.appendChild(span);
+          td.appendChild(label);
+
+          // Label text
+          const text = document.createElement('span');
+          text.className = "label-text";
+          text.textContent = itemText;
+          td.appendChild(text);
+
+          // Event
+          input.addEventListener('change', function() {
+            updateItem(rowIdx, colIdx, input.checked);
+          });
+        } else {
+          td.textContent = "";
+        }
+        tr.appendChild(td);
+      }
+      return tr;
+    }
+
+    // Render all rows that have at least one item
+    for (let row = 0; row < checklist.length; row++) {
+      const tr = createRow(row);
+      if (tr) tableBody.appendChild(tr);
+    }
+
+    // Firebase: Listen for updates (unique path for Niveau 4)
+    db.ref('niveau4').on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      for (let row = 0; row < checklist.length; row++) {
+        for (let col = 0; col < 4; col++) {
+          const itemText = checklist[row][col];
+          if (itemText && itemText.trim() !== "") {
+            const checked = data?.[row]?.[col] || false;
+            const box = document.getElementById(`toggle-${row}-${col}`);
+            const td = document.getElementById(`cell-${row}-${col}`);
+            if (box && td) {
+              box.checked = checked;
+              if (checked) {
+                td.classList.add('achieved');
+              } else {
+                td.classList.remove('achieved');
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Update Firebase when toggled (unique path for Niveau 4)
+    function updateItem(row, col, value) {
+      db.ref(`niveau4/${row}/${col}`).set(value);
+    }
+  </script>
+</body>
+</html>
