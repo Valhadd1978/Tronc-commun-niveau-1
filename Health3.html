@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Level 3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Firebase App (the core Firebase SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;         /* vertical center */
+      justify-content: flex-end;   /* horizontal right */
+    }
+    .container {
+      margin-right: 5vw; /* some space from the right edge */
+      width: 500px;
+      max-width: 90vw;
+    }
+    .table-title {
+      background: #003366;
+      color: #fff;
+      padding: 24px 0 24px 0;
+      text-align: center;
+      font-size: 2em;
+      font-weight: bold;
+      border-radius: 10px 10px 0 0;
+      letter-spacing: 1px;
+      margin-bottom: 0;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+      border-radius: 0 0 10px 10px;
+      overflow: hidden;
+      width: 100%;
+    }
+    td {
+      padding: 20px 28px;
+      text-align: left;
+      min-width: 180px;
+      border-bottom: 1px solid #e6e6e6;
+      position: relative;
+      font-size: 22px;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .achieved {
+      background: #c4f2c2 !important;
+      color: #206620 !important;
+      transition: background 0.3s, color 0.3s;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      vertical-align: middle;
+      margin-right: 14px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    input:checked + .slider {
+      background: #4CAF50;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+    .label-text {
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="table-title">Level 3</div>
+    <table id="checklistTable">
+      <tbody id="tableBody">
+        <!-- JS will populate rows here -->
+      </tbody>
+    </table>
+  </div>
+  <script>
+    // Firebase config (replace with your real config if needed)
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
+      authDomain: "tronc-commun-niveau-1.firebaseapp.com",
+      databaseURL: "https://tronc-commun-niveau-1-default-rtdb.firebaseio.com",
+      projectId: "tronc-commun-niveau-1",
+      storageBucket: "tronc-commun-niveau-1.appspot.com",
+      messagingSenderId: "360067485567",
+      appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Define your checklist items (add more as needed)
+    const checklist = [
+      "Become familiar with the injury prevention program.",
+      "Acquire the necessary tools (e.g., foam roller, mini band, massage gun, lacross ball, etc.).",
+      // Add more items here as needed...
+    ];
+
+    const tableBody = document.getElementById('tableBody');
+
+    // Render only items with content
+    for (let i = 0; i < checklist.length; i++) {
+      const item = checklist[i];
+      if (!item || item.trim() === "") continue;
+
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.id = `cell-${i}`;
+
+      // Switch
+      const label = document.createElement('label');
+      label.className = "switch";
+      label.setAttribute('aria-label', `Toggle ${i + 1}`);
+
+      const input = document.createElement('input');
+      input.type = "checkbox";
+      input.id = `toggle-${i}`;
+
+      const slider = document.createElement('span');
+      slider.className = "slider";
+
+      label.appendChild(input);
+      label.appendChild(slider);
+
+      // Event for updating Firebase
+      input.addEventListener('change', function() {
+        updateItem(i, input.checked);
+      });
+
+      // Text
+      const spanText = document.createElement('span');
+      spanText.className = "label-text";
+      spanText.textContent = item;
+
+      td.appendChild(label);
+      td.appendChild(spanText);
+
+      tr.appendChild(td);
+      tableBody.appendChild(tr);
+    }
+
+    // Listen for updates from Firebase using a unique path for this checklist
+    db.ref('medecine3').on('value', (snapshot) => {
+      const data = snapshot.val() || {};
+      for (let i = 0; i < checklist.length; i++) {
+        if (!checklist[i] || checklist[i].trim() === "") continue;
+        const box = document.getElementById(`toggle-${i}`);
+        const td = document.getElementById(`cell-${i}`);
+        const checked = data?.[i] || false;
+        if (box) box.checked = checked;
+        if (td) {
+          if (checked) td.classList.add('achieved');
+          else td.classList.remove('achieved');
+        }
+      }
+    });
+
+    // Update Firebase when toggled using the same unique path
+    function updateItem(idx, value) {
+      db.ref(`medecine3/${idx}`).set(value);
+    }
+  </script>
+</body>
+</html>
