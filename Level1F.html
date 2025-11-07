@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Collaborative Checklist</title>
+  <title>Collaborative Checklist – Level 1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Firebase App (the core Firebase SDK) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -90,18 +90,17 @@
   <table id="checklistTable">
     <thead>
       <tr>
-        <th>Training Fondamentals</th>
+        <th>Training Fundamentals</th>
         <th>Camps, Competitions and Team Life</th>
         <th>Equipment</th>
         <th>Working with the Support Team (PSRI)</th>
       </tr>
     </thead>
-    <tbody id="tableBody">
-      <!-- JS will populate rows here -->
-    </tbody>
+    <tbody id="tableBody"></tbody>
   </table>
+
   <script>
-    // --- Firebase config ---
+    // --- Firebase configuration ---
     const firebaseConfig = {
       apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
       authDomain: "tronc-commun-niveau-1.firebaseapp.com",
@@ -112,17 +111,17 @@
       appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
     };
 
-    // Initialize Firebase (using compat syntax!)
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const levelPath = 'niveau1'; // <-- Unique branch for this level
 
-    // Define your checklist items
+    // --- Checklist content ---
     const checklist = [
       [
         "1. Understand how to execute a training session.", 
         "1. Understand the team’s values, expected behaviours, and the approach in case of breaches.", 
         "1. Possess the necessary equipment for cycling training sessions.", 
-        "1. Learn about the support team members (athletes and staff) and how they operate as well as respond to invitations from PSRI members who will working directly with the athlete."
+        "1. Learn about the support team members (athletes and staff) and how they operate as well as respond to invitations from PSRI members who will work directly with the athlete."
       ],
       [
         "2. Have the necessary equipment to complete cycling training sessions.", 
@@ -138,9 +137,9 @@
       ],
     ];
 
-    // Generate table
     const tableBody = document.getElementById('tableBody');
 
+    // --- Create the table dynamically ---
     function createRow(rowIdx) {
       const tr = document.createElement('tr');
       for (let colIdx = 0; colIdx < 4; colIdx++) {
@@ -149,7 +148,6 @@
         const itemText = checklist[rowIdx][colIdx];
 
         if (itemText) {
-          // Switch
           const label = document.createElement('label');
           label.className = "switch";
           const input = document.createElement('input');
@@ -161,31 +159,28 @@
           label.appendChild(span);
           td.appendChild(label);
 
-          // Label text
           const text = document.createElement('span');
           text.className = "label-text";
           text.textContent = itemText;
           td.appendChild(text);
 
-          // Event
+          // Save on change
           input.addEventListener('change', function() {
             updateItem(rowIdx, colIdx, input.checked);
+            td.classList.toggle('achieved', input.checked);
           });
-        } else {
-          td.textContent = "";
         }
         tr.appendChild(td);
       }
       return tr;
     }
 
-    // Render all rows
     for (let row = 0; row < checklist.length; row++) {
       tableBody.appendChild(createRow(row));
     }
 
-    // Firebase: Listen for updates (NIVEAU 1 PATH)
-    db.ref('niveau1').on('value', (snapshot) => {
+    // --- Listen for updates from Firebase ---
+    db.ref(levelPath).on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let row = 0; row < checklist.length; row++) {
         for (let col = 0; col < 4; col++) {
@@ -195,19 +190,15 @@
             const box = document.getElementById(`toggle-${row}-${col}`);
             const td = document.getElementById(`cell-${row}-${col}`);
             box.checked = checked;
-            if (checked) {
-              td.classList.add('achieved');
-            } else {
-              td.classList.remove('achieved');
-            }
+            td.classList.toggle('achieved', checked);
           }
         }
       }
     });
 
-    // Update Firebase when toggled (NIVEAU 1 PATH)
+    // --- Update Firebase when a toggle is switched ---
     function updateItem(row, col, value) {
-      db.ref(`niveau1/${row}/${col}`).set(value);
+      db.ref(`${levelPath}/${row}/${col}`).set(value);
     }
   </script>
 </body>
