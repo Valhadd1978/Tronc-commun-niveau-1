@@ -107,8 +107,9 @@
       </tbody>
     </table>
   </div>
+
   <script>
-    // Firebase config (replace with your real config if needed)
+    // Firebase config (same project)
     const firebaseConfig = {
       apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
       authDomain: "tronc-commun-niveau-1.firebaseapp.com",
@@ -118,9 +119,19 @@
       messagingSenderId: "360067485567",
       appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
+    // Initialize Firebase only if SDK loaded and no app exists yet
+    if (window.firebase) {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+    } else {
+      console.warn('Firebase SDK not found; local fallback will still function.');
+    }
+    const db = (window.firebase && firebase.database) ? firebase.database() : null;
+  </script>
+
+  <script>
     // Define your checklist items (add more as needed)
     const checklist = [
       "Regularly demonstrates the use of mental management skills in competitive contexts at all levels.",
@@ -131,7 +142,7 @@
 
     const tableBody = document.getElementById('tableBody');
 
-    // Render only items with content
+    // Render only items with content; add data-toggle-path so the local-fallback script can manage them
     for (let i = 0; i < checklist.length; i++) {
       const item = checklist[i];
       if (!item || item.trim() === "") continue;
@@ -148,6 +159,8 @@
       const input = document.createElement('input');
       input.type = "checkbox";
       input.id = `toggle-${i}`;
+      // add data-toggle-path for local fallback handling (simple index keys)
+      input.setAttribute('data-toggle-path', `${i}`);
 
       const slider = document.createElement('span');
       slider.className = "slider";
@@ -155,9 +168,14 @@
       label.appendChild(input);
       label.appendChild(slider);
 
-      // Event for updating Firebase
+      // Event: prefer local-first setToggle if available, else fall back to updateItem
       input.addEventListener('change', function() {
-        updateItem(i, input.checked);
+        const path = `${i}`;
+        if (window.niveauLocal && typeof window.niveauLocal.setToggle === 'function') {
+          window.niveauLocal.setToggle(path, input.checked);
+        } else {
+          updateItem(i, input.checked);
+        }
       });
 
       // Text
@@ -172,8 +190,8 @@
       tableBody.appendChild(tr);
     }
 
-    // Listen for updates from Firebase
-    db.ref('nutrition1').on('value', (snapshot) => {
+    // Listen for updates from Firebase (original behavior kept)
+    db && db.ref('nutrition1').on('value', (snapshot) => {
       const data = snapshot.val() || {};
       for (let i = 0; i < checklist.length; i++) {
         if (!checklist[i] || checklist[i].trim() === "") continue;
@@ -188,20 +206,156 @@
       }
     });
 
-    // Update Firebase when toggled
+    // Update Firebase when toggled (fallback remote write)
     function updateItem(idx, value) {
-      db.ref(`nutrition1/${idx}`).set(value);
+      db && db.ref(`nutrition1/${idx}`).set(value);
     }
+  </script>
+
+  <!-- Integrated local-fallback + sync script for nutrition1 -->
+  <script>
+(function(){
+  const PATH = 'nutrition1';
+  const db = (window.firebase && firebase.database) ? firebase.database() : null;
+  const LS_KEY = PATH + '_local'; // e.g. 'nutrition1_local'
+
+  function loadLocal() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch(e) { return {}; }
+  }
+  function saveLocal(obj) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(obj)); } catch(e) {}
+  }
+
+  // Apply flattened state where keys are simple indexes as strings ("0","1",...)
+  function applyState(flatState) {
+    Object.keys(flatState).forEach(k => {
+      const box = document.getElementById(`toggle-${k}`) || document.querySelector(`[data-toggle-path="${k}"]`);
+      const td = document.getElementById(`cell-${k}`);
+      const val = !!flatState[k];
+      if (box && 'checked' in box) box.checked = val;
+      if (td) {
+        if (val) td.classList.add('achieved'); else td.classList.remove('achieved');
+      }
+    });
+  }
+
+  // Flatten remote structure: if remote contains nested rows/cols, flatten to "r/c" keys;
+  // otherwise assume top-level numeric keys mapping to booleans and use them directly.
+  function flattenRemote(remote) {
+    const flat = {};
+    if (!remote) return flat;
+    const isNested = Object.values(remote).some(v => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0);
+    if (isNested) {
+      // nested row/col structure -> flatten as "r/c"
+      Object.keys(remote).forEach(r => {
+        const row = remote[r] || {};
+        Object.keys(row).forEach(c => flat[`${r}/${c}`] = row[c]);
+      });
+    } else {
+      // top-level map: "0": true, "1": false, ...
+      Object.keys(remote).forEach(k => flat[k] = remote[k]);
+    }
+    return flat;
+  }
+
+  // Write a toggle: immediate local save + background remote write
+  function setToggle(path, value) {
+    // path is string index like "0"
+    const local = loadLocal();
+    local[path] = value;
+    saveLocal(local);
+    applyState(local);
+
+    if (!db) return;
+    db.ref(`${PATH}/${path}`).set(value)
+      .then(() => {
+        const cur = loadLocal();
+        if (cur.hasOwnProperty(path)) {
+          delete cur[path];
+          saveLocal(cur);
+        }
+      })
+      .catch(() => {
+        // keep local for retry later
+      });
+  }
+
+  // Merge remote once (remote wins) and clean local keys that remote now has
+  function syncFromRemoteOnce() {
+    if (!db) return;
+    db.ref(PATH).once('value').then(snap => {
+      const flatRemote = flattenRemote(snap.val());
+      const local = loadLocal();
+      const merged = Object.assign({}, local, flatRemote);
+      applyState(merged);
+      // keep only local entries that remote does not have yet
+      const remaining = {};
+      Object.keys(local).forEach(k => { if (!(k in flatRemote)) remaining[k] = local[k]; });
+      saveLocal(remaining);
+    }).catch(()=>{});
+  }
+
+  // Continuous listener to keep UI in sync and clear local entries when remote stored
+  function setupRemoteListener() {
+    if (!db) return;
+    db.ref(PATH).on('value', snap => {
+      const flatRemote = flattenRemote(snap.val());
+      const local = loadLocal();
+      const merged = Object.assign({}, local, flatRemote);
+      applyState(merged);
+      const remaining = {};
+      Object.keys(local).forEach(k => { if (!(k in flatRemote)) remaining[k] = local[k]; });
+      saveLocal(remaining);
+    });
+  }
+
+  // Attach handlers to inputs/elements with data-toggle-path (or id pattern)
+  function attachHandlers() {
+    // inputs by id pattern or data-toggle-path
+    document.querySelectorAll('input[id^="toggle-"], [data-toggle-path]').forEach(el => {
+      // input elements
+      if (el.tagName.toLowerCase() === 'input') {
+        if (!el.hasAttribute('data-toggle-path')) {
+          const idParts = el.id.split('-').slice(1); // toggle-<i>
+          if (idParts.length === 1) el.setAttribute('data-toggle-path', idParts[0]);
+        }
+        el.addEventListener('change', () => {
+          const path = el.getAttribute('data-toggle-path');
+          if (path) setToggle(path, !!el.checked);
+        });
+        return;
+      }
+      // non-input elements with data-toggle-path
+      const path = el.getAttribute('data-toggle-path');
+      if (!path) return;
+      el.addEventListener('click', () => {
+        let newVal = el.getAttribute('aria-pressed') === 'true' ? false : true;
+        if ('checked' in el) newVal = !!el.checked;
+        if ('checked' in el) el.checked = newVal;
+        else {
+          if (newVal) el.classList.add('on'); else el.classList.remove('on');
+        }
+        try { el.setAttribute('aria-pressed', newVal ? 'true' : 'false'); } catch(e){}
+        setToggle(path, newVal);
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      applyState(loadLocal());      // immediate UI from localStorage
+      attachHandlers();             // handle user interactions
+      syncFromRemoteOnce();         // merge remote values
+      setupRemoteListener();        // keep listening for updates
+    } catch(e) {
+      console.error('nutrition1 local fallback init error', e);
+    }
+  });
+
+  // Expose helper for console debugging
+  window.niveauLocal = { setToggle, loadLocal, saveLocal, syncFromRemoteOnce };
+})();
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
