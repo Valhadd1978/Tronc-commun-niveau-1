@@ -87,6 +87,21 @@
 </head>
 <body>
   <h1>Niveau 4</h1>
+  <div id="selector-bar" style="text-align:center;padding:20px 0 16px 0;">
+    <label for="athlete-select" style="font-size:1.05em;font-weight:600;margin-right:10px;color:#003366;">Athlete:</label>
+    <select id="athlete-select" style="font-size:1em;padding:8px 16px;border-radius:8px;border:2px solid #003366;background:#fff;color:#003366;cursor:pointer;outline:none;">
+      <option value="">-- Select an athlete --</option>
+      <option value="Martin_Duif">Martin Duif</option>
+      <option value="Jessica_Law">Jessica Law</option>
+      <option value="Alexandre_Hayward">Alexandre Hayward</option>
+      <option value="Mike_Sametz">Mike Sametz</option>
+      <option value="Nathan_Clement">Nathan Clement</option>
+      <option value="Mel_Pemple">Mel Pemple</option>
+      <option value="Kate_OBrien">Kate O'Brien</option>
+      <option value="Lowell_Taylor">Lowell Taylor</option>
+    </select>
+  </div>
+  <div id="table-wrapper" style="display:none">
   <table id="checklistTable">
     <thead>
       <tr>
@@ -100,6 +115,7 @@
       <!-- JS will populate rows here -->
     </tbody>
   </table>
+  </div>
   <script>
     // --- CORRECT Firebase config, DO NOT duplicate, DO NOT add extra curly braces ---
     const firebaseConfig = {
@@ -115,6 +131,8 @@
     // Initialize Firebase (using compat syntax!)
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    let currentAthleteId = localStorage.getItem('selectedAthlete') || '';
+    let currentListener = null;
 
     // Define your checklist items
     const checklist = [
@@ -189,33 +207,62 @@
       if (tr) tableBody.appendChild(tr);
     }
 
-    // Firebase: Listen for updates (unique path for Niveau 4)
-    db.ref('niveau4').on('value', (snapshot) => {
-      const data = snapshot.val() || {};
-      for (let row = 0; row < checklist.length; row++) {
-        for (let col = 0; col < 4; col++) {
-          const itemText = checklist[row][col];
-          if (itemText && itemText.trim() !== "") {
-            const checked = data?.[row]?.[col] || false;
-            const box = document.getElementById(`toggle-${row}-${col}`);
-            const td = document.getElementById(`cell-${row}-${col}`);
-            if (box && td) {
-              box.checked = checked;
-              if (checked) {
-                td.classList.add('achieved');
-              } else {
-                td.classList.remove('achieved');
-              }
+    function loadAthlete(athleteId) {
+      if (currentListener) {
+        db && db.ref('niveau4/' + currentAthleteId).off('value', currentListener);
+        currentListener = null;
+      }
+      currentAthleteId = athleteId;
+      for (let r = 0; r < checklist.length; r++) {
+        for (let c = 0; c < 4; c++) {
+          const box = document.getElementById('toggle-' + r + '-' + c);
+          const td = document.getElementById('cell-' + r + '-' + c);
+          if (box) box.checked = false;
+          if (td) td.classList.remove('achieved');
+        }
+      }
+      if (!db || !athleteId) return;
+      currentListener = db.ref('niveau4/' + athleteId).on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        for (let row = 0; row < checklist.length; row++) {
+          for (let col = 0; col < 4; col++) {
+            const itemText = checklist[row][col];
+            if (itemText && itemText.trim() !== '') {
+              const checked = data?.[row]?.[col] || false;
+              const box = document.getElementById('toggle-' + row + '-' + col);
+              const td = document.getElementById('cell-' + row + '-' + col);
+              if (box) box.checked = checked;
+              if (td) { checked ? td.classList.add('achieved') : td.classList.remove('achieved'); }
             }
           }
         }
+      });
+    }
+    function updateItem(row, col, value) {
+      if (!db || !currentAthleteId) return;
+      db.ref('niveau4/' + currentAthleteId + '/' + row + '/' + col).set(value);
+    }
+  </script>
+
+  <script>
+
+    const _sel = document.getElementById('athlete-select');
+    if (currentAthleteId) {
+      _sel.value = currentAthleteId;
+      document.getElementById('table-wrapper').style.display = '';
+      loadAthlete(currentAthleteId);
+    }
+    _sel.addEventListener('change', function() {
+      const val = this.value;
+      if (val) {
+        localStorage.setItem('selectedAthlete', val);
+        document.getElementById('table-wrapper').style.display = '';
+        loadAthlete(val);
+      } else {
+        localStorage.removeItem('selectedAthlete');
+        document.getElementById('table-wrapper').style.display = 'none';
       }
     });
-
-    // Update Firebase when toggled (unique path for Niveau 4)
-    function updateItem(row, col, value) {
-      db.ref(`niveau4/${row}/${col}`).set(value);
-    }
   </script>
 </body>
 </html>

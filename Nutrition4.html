@@ -99,7 +99,21 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div id="selector-bar" style="text-align:center;padding:20px 0 16px 0;">
+    <label for="athlete-select" style="font-size:1.05em;font-weight:600;margin-right:10px;color:#003366;">Athlete:</label>
+    <select id="athlete-select" style="font-size:1em;padding:8px 16px;border-radius:8px;border:2px solid #003366;background:#fff;color:#003366;cursor:pointer;outline:none;">
+      <option value="">-- Select an athlete --</option>
+      <option value="Martin_Duif">Martin Duif</option>
+      <option value="Jessica_Law">Jessica Law</option>
+      <option value="Alexandre_Hayward">Alexandre Hayward</option>
+      <option value="Mike_Sametz">Mike Sametz</option>
+      <option value="Nathan_Clement">Nathan Clement</option>
+      <option value="Mel_Pemple">Mel Pemple</option>
+      <option value="Kate_OBrien">Kate O'Brien</option>
+      <option value="Lowell_Taylor">Lowell Taylor</option>
+    </select>
+  </div>
+  <div class="container" id="table-wrapper" style="display:none">
     <div class="table-title">Niveau 4</div>
     <table id="checklistTable">
       <tbody id="tableBody">
@@ -120,6 +134,8 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    let currentAthleteId = localStorage.getItem('selectedAthlete') || '';
+    let currentListener = null;
 
     // Define your checklist items (add more as needed)
     const checklist = [
@@ -171,26 +187,56 @@
       tableBody.appendChild(tr);
     }
 
-    // Listen for updates from Firebase
-    db.ref('nutrition1').on('value', (snapshot) => {
-      const data = snapshot.val() || {};
-      for (let i = 0; i < checklist.length; i++) {
-        if (!checklist[i] || checklist[i].trim() === "") continue;
-        const box = document.getElementById(`toggle-${i}`);
-        const td = document.getElementById(`cell-${i}`);
-        const checked = data?.[i] || false;
-        if (box) box.checked = checked;
-        if (td) {
-          if (checked) td.classList.add('achieved');
-          else td.classList.remove('achieved');
+    function loadAthlete(athleteId) {
+      if (currentListener) {
+        db && db.ref('nutrition1/' + currentAthleteId).off('value', currentListener);
+        currentListener = null;
+      }
+      currentAthleteId = athleteId;
+      for (let _i = 0; _i < checklist.length; _i++) {
+        const _b = document.getElementById('toggle-' + _i);
+        const _d = document.getElementById('cell-' + _i);
+        if (_b) _b.checked = false;
+        if (_d) _d.classList.remove('achieved');
+      }
+      if (!db || !athleteId) return;
+      currentListener = db.ref('nutrition1/' + athleteId).on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        for (let i = 0; i < checklist.length; i++) {
+          if (!checklist[i] || checklist[i].trim() === '') continue;
+          const box = document.getElementById('toggle-' + i);
+          const td = document.getElementById('cell-' + i);
+          const checked = data?.[i] || false;
+          if (box) box.checked = checked;
+          if (td) { checked ? td.classList.add('achieved') : td.classList.remove('achieved'); }
         }
+      });
+    }
+    function updateItem(idx, value) {
+      if (!db || !currentAthleteId) return;
+      db.ref('nutrition1/' + currentAthleteId + '/' + idx).set(value);
+    }
+  </script>
+
+  <script>
+
+    const _sel = document.getElementById('athlete-select');
+    if (currentAthleteId) {
+      _sel.value = currentAthleteId;
+      document.getElementById('table-wrapper').style.display = '';
+      loadAthlete(currentAthleteId);
+    }
+    _sel.addEventListener('change', function() {
+      const val = this.value;
+      if (val) {
+        localStorage.setItem('selectedAthlete', val);
+        document.getElementById('table-wrapper').style.display = '';
+        loadAthlete(val);
+      } else {
+        localStorage.removeItem('selectedAthlete');
+        document.getElementById('table-wrapper').style.display = 'none';
       }
     });
-
-    // Update Firebase when toggled
-    function updateItem(idx, value) {
-      db.ref(`nutrition1/${idx}`).set(value);
-    }
   </script>
 </body>
 </html>

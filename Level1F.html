@@ -87,6 +87,21 @@
 </head>
 <body>
   <h1>Level 1</h1>
+  <div id="selector-bar" style="text-align:center;padding:20px 0 16px 0;">
+    <label for="athlete-select" style="font-size:1.05em;font-weight:600;margin-right:10px;color:#003366;">Athlete:</label>
+    <select id="athlete-select" style="font-size:1em;padding:8px 16px;border-radius:8px;border:2px solid #003366;background:#fff;color:#003366;cursor:pointer;outline:none;">
+      <option value="">-- Select an athlete --</option>
+      <option value="Martin_Duif">Martin Duif</option>
+      <option value="Jessica_Law">Jessica Law</option>
+      <option value="Alexandre_Hayward">Alexandre Hayward</option>
+      <option value="Mike_Sametz">Mike Sametz</option>
+      <option value="Nathan_Clement">Nathan Clement</option>
+      <option value="Mel_Pemple">Mel Pemple</option>
+      <option value="Kate_OBrien">Kate O'Brien</option>
+      <option value="Lowell_Taylor">Lowell Taylor</option>
+    </select>
+  </div>
+  <div id="table-wrapper" style="display:none">
   <table id="checklistTable">
     <thead>
       <tr>
@@ -100,6 +115,7 @@
       <!-- JS will populate rows here -->
     </tbody>
   </table>
+  </div>
   <script>
     // --- Firebase config ---
     const firebaseConfig = {
@@ -115,6 +131,8 @@
     // Initialize Firebase (using compat syntax!)
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    let currentAthleteId = localStorage.getItem('selectedAthlete') || '';
+    let currentListener = null;
 
     // Define your checklist items
     const checklist = [
@@ -187,114 +205,67 @@
       tableBody.appendChild(createRow(row));
     }
 
-    // ---------- Local fallback & sync helpers ----------
-    const LS_KEY = 'niveau1_local';
 
-    function loadLocal() {
-      try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
-      catch(e) { return {}; }
-    }
-    function saveLocal(obj) {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(obj)); }
-      catch(e) {}
-    }
-
-    // Apply a flattened state object whose keys are "row/col" (e.g. "0/0") and values booleans
-    function applyState(flatState) {
-      Object.keys(flatState).forEach(k => {
-        const [r,c] = k.split('/');
-        const box = document.getElementById(`toggle-${r}-${c}`);
-        const td = document.getElementById(`cell-${r}-${c}`);
-        const val = !!flatState[k];
-        if (box) box.checked = val;
-        if (td) {
-          if (val) td.classList.add('achieved'); else td.classList.remove('achieved');
+    function loadAthlete(athleteId) {
+      if (currentListener) {
+        db && db.ref('niveau1/' + currentAthleteId).off('value', currentListener);
+        currentListener = null;
+      }
+      currentAthleteId = athleteId;
+      for (let r = 0; r < checklist.length; r++) {
+        for (let c = 0; c < 4; c++) {
+          const box = document.getElementById('toggle-' + r + '-' + c);
+          const td = document.getElementById('cell-' + r + '-' + c);
+          if (box) box.checked = false;
+          if (td) td.classList.remove('achieved');
+        }
+      }
+      if (!db || !athleteId) return;
+      currentListener = db.ref('niveau1/' + athleteId).on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        for (let row = 0; row < checklist.length; row++) {
+          for (let col = 0; col < 4; col++) {
+            const itemText = checklist[row][col];
+            if (itemText && itemText.trim() !== '') {
+              const checked = data?.[row]?.[col] || false;
+              const box = document.getElementById('toggle-' + row + '-' + col);
+              const td = document.getElementById('cell-' + row + '-' + col);
+              if (box) box.checked = checked;
+              if (td) { checked ? td.classList.add('achieved') : td.classList.remove('achieved'); }
+            }
+          }
         }
       });
     }
-
-    // Convert nested remote object into flattened "r/c": value map
-    function flattenRemote(remote) {
-      const flat = {};
-      if (!remote) return flat;
-      Object.keys(remote).forEach(r => {
-        const row = remote[r] || {};
-        Object.keys(row).forEach(c => flat[`${r}/${c}`] = row[c]);
-      });
-      return flat;
+    function updateItem(row, col, value) {
+      if (!db || !currentAthleteId) return;
+      db.ref('niveau1/' + currentAthleteId + '/' + row + '/' + col).set(value);
     }
-
-    // Write a toggle: immediate local save + background remote write
     function setToggle(path, value) {
-      // Update local immediately
-      const local = loadLocal();
-      local[path] = value;
-      saveLocal(local);
-      applyState(local);
-
-      // Attempt remote write
-      if (!db) return;
-      const [r,c] = path.split('/');
-      db.ref(`niveau1/${r}/${c}`).set(value)
-        .then(() => {
-          // Remove key from local once remote persisted
-          const cur = loadLocal();
-          if (cur.hasOwnProperty(path)) {
-            delete cur[path];
-            saveLocal(cur);
-          }
-        })
-        .catch(() => {
-          // keep local entry for retry; we don't spam errors here
-        });
+      const parts = path.split('/');
+      updateItem(parseInt(parts[0]), parseInt(parts[1]), value);
     }
+  </script>
 
-    // Sync remote once and merge with local (remote takes precedence)
-    function syncFromRemoteOnce() {
-      if (!db) return;
-      db.ref('niveau1').once('value').then(snap => {
-        const flatRemote = flattenRemote(snap.val());
-        const local = loadLocal();
-        // merged: remote values override local ones
-        const merged = Object.assign({}, local, flatRemote);
-        applyState(merged);
-        // keep only local entries that remote does not have yet
-        const remaining = {};
-        Object.keys(local).forEach(k => { if (!(k in flatRemote)) remaining[k] = local[k]; });
-        saveLocal(remaining);
-      }).catch(() => {
-        // ignore read errors; local still applied
-      });
+  <script>
+
+    const _sel = document.getElementById('athlete-select');
+    if (currentAthleteId) {
+      _sel.value = currentAthleteId;
+      document.getElementById('table-wrapper').style.display = '';
+      loadAthlete(currentAthleteId);
     }
-
-    // Continuous remote listener to keep UI updated and clear saved local keys
-    function setupRemoteListener() {
-      if (!db) return;
-      db.ref('niveau1').on('value', snap => {
-        const flatRemote = flattenRemote(snap.val());
-        const local = loadLocal();
-        // merged: local keys remain only if remote doesn't have them
-        const merged = Object.assign({}, local, flatRemote);
-        applyState(merged);
-        const remaining = {};
-        Object.keys(local).forEach(k => { if (!(k in flatRemote)) remaining[k] = local[k]; });
-        saveLocal(remaining);
-      });
-    }
-
-    // Initialize: apply saved local state first, then sync remote & listen
-    (function init() {
-      try {
-        applyState(loadLocal());    // immediate UI from localStorage
-        syncFromRemoteOnce();       // merge remote once
-        setupRemoteListener();      // keep listening for updates
-      } catch(e) {
-        console.error('niveau1 local fallback init error', e);
+    _sel.addEventListener('change', function() {
+      const val = this.value;
+      if (val) {
+        localStorage.setItem('selectedAthlete', val);
+        document.getElementById('table-wrapper').style.display = '';
+        loadAthlete(val);
+      } else {
+        localStorage.removeItem('selectedAthlete');
+        document.getElementById('table-wrapper').style.display = 'none';
       }
-    })();
-
-    // Expose helper to console for debugging
-    window.niveauLocal = { setToggle, loadLocal, saveLocal, syncFromRemoteOnce };
+    });
   </script>
 </body>
 </html>
