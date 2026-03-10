@@ -139,7 +139,7 @@
     const navHtml = `  <div id="nav-bar">
     <a href="index.html" class="nav-home">⌂ Home</a>
     <span class="nav-divider">|</span>
-    <span class="nav-cat">NUT-E</span> <a href="NutritionE1.html?athlete=' + (athleteId||'') + '">1</a> <a href="NutritionE2.html?athlete=' + (athleteId||'') + '">2</a> <a href="NutritionE3.html?athlete=' + (athleteId||'') + '">3</a> <a href="NutritionE4.html?athlete=' + (athleteId||'') + '">4</a> <a href="NutritionE5.html?athlete=' + (athleteId||'') + '">5</a>
+    <span class="nav-cat">NUT-E</span> <a href="NutritionE1.html?athlete=${athleteId}">1</a> <a href="NutritionE2.html?athlete=${athleteId}">2</a> <a href="NutritionE3.html?athlete=${athleteId}">3</a> <a href="NutritionE4.html?athlete=${athleteId}">4</a> <a href="NutritionE5.html?athlete=${athleteId}">5</a>
   </div>`;
     document.body.insertAdjacentHTML('afterbegin', navHtml);
 
