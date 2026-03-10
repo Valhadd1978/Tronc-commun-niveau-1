@@ -9,9 +9,7 @@
   <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 40px; }
     h1 { text-align: center; margin-bottom: 24px; }
-    #selector-bar { text-align: center; margin-bottom: 28px; }
     #selector-bar label { font-size: 1.05em; font-weight: 600; margin-right: 10px; color: #003366; }
-    #athlete-select { font-size: 1em; padding: 8px 16px; border-radius: 8px; border: 2px solid #003366; background: #fff; color: #003366; cursor: pointer; outline: none; }
     table { border-collapse: collapse; margin: 0 auto; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.05); border-radius: 10px; overflow: hidden; }
     th, td { padding: 16px 24px; text-align: left; min-width: 180px; border-bottom: 1px solid #e6e6e6; }
     th { background: #003366; color: #fff; font-size: 1.14em; }
@@ -26,24 +24,20 @@
     td { position: relative; }
     .label-text { margin-left: 12px; }
     #table-wrapper { display: none; }
+  
+    #nav-bar { position: fixed; top: 0; left: 0; right: 0; background: #1a3a6b; color: white; padding: 8px 16px; z-index: 9999; display: flex; align-items: center; gap: 8px; font-family: 'Segoe UI', sans-serif; font-size: 0.85em; }
+    #nav-bar a { color: #fff; text-decoration: none; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.15); }
+    #nav-bar a:hover { background: rgba(255,255,255,0.35); }
+    .nav-home { font-weight: bold; }
+    .nav-divider { color: rgba(255,255,255,0.4); }
+    .nav-cat { color: rgba(255,255,255,0.7); font-size: 0.9em; }
+    body { padding-top: 50px !important; }
+
   </style>
 </head>
 <body>
+  <div id="nav-bar"></div>
   <h1>Level 1</h1>
-  <div id="selector-bar">
-    <label for="athlete-select">Athlete:</label>
-    <select id="athlete-select">
-      <option value="">-- Select an athlete --</option>
-      <option value="Martin_Duif">Martin Duif</option>
-      <option value="Jessica_Law">Jessica Law</option>
-      <option value="Alexandre_Hayward">Alexandre Hayward</option>
-      <option value="Mike_Sametz">Mike Sametz</option>
-      <option value="Nathan_Clement">Nathan Clement</option>
-      <option value="Mel_Pemple">Mel Pemple</option>
-      <option value="Kate_OBrien">Kate O'Brien</option>
-      <option value="Lowell_Taylor">Lowell Taylor</option>
-    </select>
-  </div>
   <div id="table-wrapper">
     <table id="checklistTable">
       <thead>
@@ -72,19 +66,19 @@
     }
     const db = (window.firebase && firebase.database) ? firebase.database() : null;
     const DB_PATH = 'niveau1';
-    const athleteId = localStorage.getItem('selectedAthlete') || null;
+    const athleteId = new URLSearchParams(window.location.search).get('athlete');
+    if (!athleteId) { window.location.href = 'index.html'; }
+    // Insert nav bar
+    const navHtml = `  <div id="nav-bar">
+    <a href="index.html" class="nav-home">⌂ Home</a>
+    <span class="nav-divider">|</span>
+    <span class="nav-cat">MAIN</span> <a href="Level%201.html?athlete=' + (athleteId||'') + '">1</a> <a href="Level2.html?athlete=' + (athleteId||'') + '">2</a> <a href="Level3.html?athlete=' + (athleteId||'') + '">3</a> <a href="Level4.html?athlete=' + (athleteId||'') + '">4</a> <a href="Level5.html?athlete=' + (athleteId||'') + '">5</a>
+  </div>`;
+    document.body.insertAdjacentHTML('afterbegin', navHtml);
 
-    const tableWrapper = document.getElementById('table-wrapper');
-    if (tableWrapper) tableWrapper.style.display = athleteId ? 'block' : 'none';
-    const sel = document.getElementById('athlete-select');
-    if (sel) sel.value = athleteId || '';
-    document.getElementById('athlete-select').addEventListener('change', function() {
-      const val = this.value;
-      if (val) localStorage.setItem('selectedAthlete', val);
-      else     localStorage.removeItem('selectedAthlete');
-      window.location.reload();
-    });
 
+
+    const tableWrapper = document.getElementById('table-wrapper'); if (tableWrapper) tableWrapper.style.display = 'block';
     const checklist = [
       [
         "1. Understand how to execute a training session.",

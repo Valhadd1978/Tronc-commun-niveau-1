@@ -95,6 +95,7 @@
       text-align: left;
       transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
       box-shadow: 0 2px 8px rgba(0,51,102,0.18);
+      text-decoration: none;
     }
 
     .athlete-btn:hover {
@@ -134,34 +135,27 @@
 
     <div class="section-label">Select your profile</div>
     <div class="athlete-list">
-      <button class="athlete-btn" onclick="go('Jessica_Law', 'https://view.genially.com/699624a4caa8c4e5963117c8')">
+      <a class="athlete-btn" href="Level%201.html?athlete=Jessica_Law">
         Jessica Law <span class="arrow">›</span>
-      </button>
-      <button class="athlete-btn" onclick="go('Martin_Duif', 'https://view.genially.com/69a1a440708117c3604a66e6')">
+      </a>
+      <a class="athlete-btn" href="Level%201.html?athlete=Martin_Duif">
         Martin Duif <span class="arrow">›</span>
-      </button>
-      <button class="athlete-btn" onclick="go('Alexandre_Hayward', 'https://view.genially.com/69a1a3bd456bfda5b780257e')">
+      </a>
+      <a class="athlete-btn" href="Level%201.html?athlete=Alexandre_Hayward">
         Alexandre Hayward <span class="arrow">›</span>
-      </button>
-      <button class="athlete-btn" onclick="go('Mike_Sametz', 'https://view.genially.com/69a1a4720b35b5efd6a66e64')">
+      </a>
+      <a class="athlete-btn" href="Level%201.html?athlete=Mike_Sametz">
         Mike Sametz <span class="arrow">›</span>
-      </button>
-      <button class="athlete-btn" onclick="go('Nathan_Clement', 'https://view.genially.com/69a986492d6cc3cc5b99bc69')">
+      </a>
+      <a class="athlete-btn" href="Level%201.html?athlete=Nathan_Clement">
         Nathan Clement <span class="arrow">›</span>
-      </button>
-      <button class="athlete-btn" onclick="go('Mel_Pemple', 'https://view.genially.com/69a1a3e88f8b47b34206f582')">
+      </a>
+      <a class="athlete-btn" href="Level%201.html?athlete=Mel_Pemple">
         Mel Pemple <span class="arrow">›</span>
-      </button>
+      </a>
     </div>
   </div>
 
   <footer>Tronc Commun · Para-cyclisme Canada</footer>
-
-  <script>
-    function go(athleteId, url) {
-      localStorage.setItem('selectedAthlete', athleteId);
-      window.location.href = url;
-    }
-  </script>
 </body>
 </html>
