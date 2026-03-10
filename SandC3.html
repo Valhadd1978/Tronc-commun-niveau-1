@@ -123,14 +123,14 @@
     }
     const db = (window.firebase && firebase.database) ? firebase.database() : null;
     const DB_PATH = 'sc3';
+    const athleteId = localStorage.getItem('selectedAthlete') || null;
 
     const checklist = [
       "Understand how to read a S&C program and provide adequate feedback/data.",
       "Explore the functional adaptation strategies and build the habit of using them.",
       // Add more items here as needed...
-    ];
+    ]
 
-    // ── Build UI ──────────────────────────────────────────────────────
     const tableBody = document.getElementById('tableBody');
     for (let i = 0; i < checklist.length; i++) {
       const item = checklist[i];
@@ -156,39 +156,16 @@
       tr.appendChild(td);
       tableBody.appendChild(tr);
 
-      // Write: read localStorage fresh at the moment of every write
       input.addEventListener('change', (function(idx, inp) {
         return function() {
-          const _a = localStorage.getItem('selectedAthlete');
-          if (!_a || !db) return;
-          db.ref(DB_PATH + '/' + _a + '/' + idx).set(inp.checked);
+          if (!athleteId || !db) return;
+          db.ref(DB_PATH + '/' + athleteId + '/' + idx).set(inp.checked);
         };
       })(i, input));
     }
 
-    // ── Athlete listener management ───────────────────────────────────
-    let _activeAthlete = null;
-    let _fbListener   = null;
-
-    function _resetUI() {
-      for (let i = 0; i < checklist.length; i++) {
-        const b = document.getElementById('toggle-' + i);
-        const t = document.getElementById('cell-' + i);
-        if (b) b.checked = false;
-        if (t) t.classList.remove('achieved');
-      }
-    }
-
-    function _checkAthlete() {
-      const aid = localStorage.getItem('selectedAthlete') || null;
-      if (aid === _activeAthlete) return;
-      if (_fbListener && _activeAthlete && db)
-        db.ref(DB_PATH + '/' + _activeAthlete).off('value', _fbListener);
-      _fbListener = null;
-      _resetUI();
-      _activeAthlete = aid;
-      if (!aid || !db) return;
-      _fbListener = db.ref(DB_PATH + '/' + aid).on('value', function(snap) {
+    if (athleteId && db) {
+      db.ref(DB_PATH + '/' + athleteId).on('value', function(snap) {
         const data = snap.val() || {};
         for (let i = 0; i < checklist.length; i++) {
           if (!checklist[i] || !checklist[i].trim()) continue;
@@ -200,13 +177,6 @@
         }
       });
     }
-
-    window.addEventListener('load',          _checkAthlete);
-    document.addEventListener('visibilitychange', function() {
-      if (!document.hidden) _checkAthlete();
-    });
-    window.addEventListener('pageshow',      _checkAthlete);
-    window.addEventListener('focus',         _checkAthlete);
   </script>
 </body>
 </html>

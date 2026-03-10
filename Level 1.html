@@ -72,6 +72,18 @@
     }
     const db = (window.firebase && firebase.database) ? firebase.database() : null;
     const DB_PATH = 'niveau1';
+    const athleteId = localStorage.getItem('selectedAthlete') || null;
+
+    const tableWrapper = document.getElementById('table-wrapper');
+    if (tableWrapper) tableWrapper.style.display = athleteId ? 'block' : 'none';
+    const sel = document.getElementById('athlete-select');
+    if (sel) sel.value = athleteId || '';
+    document.getElementById('athlete-select').addEventListener('change', function() {
+      const val = this.value;
+      if (val) localStorage.setItem('selectedAthlete', val);
+      else     localStorage.removeItem('selectedAthlete');
+      window.location.reload();
+    });
 
     const checklist = [
       [
@@ -92,11 +104,9 @@
         "",
         "3. Sign the consent form."
       ],
-    ];
+    ]
 
-    // ── Build UI ──────────────────────────────────────────────────────
-    const tableBody    = document.getElementById('tableBody');
-    const tableWrapper = document.getElementById('table-wrapper');
+    const tableBody = document.getElementById('tableBody');
     function buildTable() {
       tableBody.innerHTML = '';
       for (let row = 0; row < checklist.length; row++) {
@@ -123,9 +133,8 @@
 
             input.addEventListener('change', (function(r, c, inp) {
               return function() {
-                const _a = localStorage.getItem('selectedAthlete');
-                if (!_a || !db) return;
-                db.ref(DB_PATH + '/' + _a + '/' + r + '/' + c).set(inp.checked);
+                if (!athleteId || !db) return;
+                db.ref(DB_PATH + '/' + athleteId + '/' + r + '/' + c).set(inp.checked);
               };
             })(row, col, input));
           }
@@ -136,37 +145,8 @@
     }
     buildTable();
 
-    // ── Athlete listener management ───────────────────────────────────
-    let _activeAthlete = null;
-    let _fbListener   = null;
-
-    function _resetUI() {
-      for (let row = 0; row < checklist.length; row++) {
-        for (let col = 0; col < 4; col++) {
-          if (!checklist[row][col]) continue;
-          const b = document.getElementById('toggle-' + row + '-' + col);
-          const t = document.getElementById('cell-'   + row + '-' + col);
-          if (b) b.checked = false;
-          if (t) t.classList.remove('achieved');
-        }
-      }
-    }
-
-    function _checkAthlete() {
-      const aid = localStorage.getItem('selectedAthlete') || null;
-      // Keep dropdown in sync with localStorage
-      const sel = document.getElementById('athlete-select');
-      if (sel && sel.value !== (aid || '')) sel.value = aid || '';
-      if (aid) tableWrapper.style.display = 'block';
-      else     tableWrapper.style.display = 'none';
-      if (aid === _activeAthlete) return;
-      if (_fbListener && _activeAthlete && db)
-        db.ref(DB_PATH + '/' + _activeAthlete).off('value', _fbListener);
-      _fbListener = null;
-      _resetUI();
-      _activeAthlete = aid;
-      if (!aid || !db) return;
-      _fbListener = db.ref(DB_PATH + '/' + aid).on('value', function(snap) {
+    if (athleteId && db) {
+      db.ref(DB_PATH + '/' + athleteId).on('value', function(snap) {
         const data = snap.val() || {};
         for (let row = 0; row < checklist.length; row++) {
           for (let col = 0; col < 4; col++) {
@@ -180,21 +160,6 @@
         }
       });
     }
-
-    // Dropdown also writes to localStorage so other checklist pages stay in sync
-    document.getElementById('athlete-select').addEventListener('change', function() {
-      const val = this.value;
-      if (val) localStorage.setItem('selectedAthlete', val);
-      else     localStorage.removeItem('selectedAthlete');
-      _checkAthlete();
-    });
-
-    window.addEventListener('load',          _checkAthlete);
-    document.addEventListener('visibilitychange', function() {
-      if (!document.hidden) _checkAthlete();
-    });
-    window.addEventListener('pageshow',      _checkAthlete);
-    window.addEventListener('focus',         _checkAthlete);
   </script>
 </body>
 </html>

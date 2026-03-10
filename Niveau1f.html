@@ -115,6 +115,7 @@
     }
     const db = (window.firebase && firebase.database) ? firebase.database() : null;
     const DB_PATH = 'niveau1';
+    const athleteId = localStorage.getItem('selectedAthlete') || null;
 
     const checklist = [
       [
@@ -135,76 +136,49 @@
         "", 
         "3. Signer le formulaire de consentement."
       ],
-    ];
+    ]
 
-    // ── Build UI ──────────────────────────────────────────────────────
     const tableBody = document.getElementById('tableBody');
-    function createRow(rowIdx) {
-      const tr = document.createElement('tr');
-      for (let colIdx = 0; colIdx < 4; colIdx++) {
-        const td = document.createElement('td');
-        td.id = 'cell-' + rowIdx + '-' + colIdx;
-        const itemText = checklist[rowIdx][colIdx];
-        if (itemText) {
-          const label = document.createElement('label');
-          label.className = 'switch';
-          const input = document.createElement('input');
-          input.type = 'checkbox';
-          input.id = 'toggle-' + rowIdx + '-' + colIdx;
-          const span = document.createElement('span');
-          span.className = 'slider';
-          label.appendChild(input);
-          label.appendChild(span);
-          td.appendChild(label);
-          const text = document.createElement('span');
-          text.className = 'label-text';
-          text.textContent = itemText;
-          td.appendChild(text);
-
-          input.addEventListener('change', (function(r, c, inp) {
-            return function() {
-              const _a = localStorage.getItem('selectedAthlete');
-              if (!_a || !db) return;
-              db.ref(DB_PATH + '/' + _a + '/' + r + '/' + c).set(inp.checked);
-            };
-          })(rowIdx, colIdx, input));
-        } else {
-          td.textContent = '';
-        }
-        tr.appendChild(td);
-      }
-      return tr;
-    }
-    for (let row = 0; row < checklist.length; row++) {
-      tableBody.appendChild(createRow(row));
-    }
-
-    // ── Athlete listener management ───────────────────────────────────
-    let _activeAthlete = null;
-    let _fbListener   = null;
-
-    function _resetUI() {
+    function buildTable() {
+      tableBody.innerHTML = '';
       for (let row = 0; row < checklist.length; row++) {
+        const tr = document.createElement('tr');
         for (let col = 0; col < 4; col++) {
-          if (!checklist[row][col]) continue;
-          const b = document.getElementById('toggle-' + row + '-' + col);
-          const t = document.getElementById('cell-'   + row + '-' + col);
-          if (b) b.checked = false;
-          if (t) t.classList.remove('achieved');
+          const td = document.createElement('td');
+          td.id = 'cell-' + row + '-' + col;
+          const itemText = checklist[row][col];
+          if (itemText) {
+            const label = document.createElement('label');
+            label.className = 'switch';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = 'toggle-' + row + '-' + col;
+            const span = document.createElement('span');
+            span.className = 'slider';
+            label.appendChild(input);
+            label.appendChild(span);
+            td.appendChild(label);
+            const text = document.createElement('span');
+            text.className = 'label-text';
+            text.textContent = itemText;
+            td.appendChild(text);
+
+            input.addEventListener('change', (function(r, c, inp) {
+              return function() {
+                if (!athleteId || !db) return;
+                db.ref(DB_PATH + '/' + athleteId + '/' + r + '/' + c).set(inp.checked);
+              };
+            })(row, col, input));
+          }
+          tr.appendChild(td);
         }
+        tableBody.appendChild(tr);
       }
     }
+    buildTable();
 
-    function _checkAthlete() {
-      const aid = localStorage.getItem('selectedAthlete') || null;
-      if (aid === _activeAthlete) return;
-      if (_fbListener && _activeAthlete && db)
-        db.ref(DB_PATH + '/' + _activeAthlete).off('value', _fbListener);
-      _fbListener = null;
-      _resetUI();
-      _activeAthlete = aid;
-      if (!aid || !db) return;
-      _fbListener = db.ref(DB_PATH + '/' + aid).on('value', function(snap) {
+    if (athleteId && db) {
+      db.ref(DB_PATH + '/' + athleteId).on('value', function(snap) {
         const data = snap.val() || {};
         for (let row = 0; row < checklist.length; row++) {
           for (let col = 0; col < 4; col++) {
@@ -218,13 +192,6 @@
         }
       });
     }
-
-    window.addEventListener('load',          _checkAthlete);
-    document.addEventListener('visibilitychange', function() {
-      if (!document.hidden) _checkAthlete();
-    });
-    window.addEventListener('pageshow',      _checkAthlete);
-    window.addEventListener('focus',         _checkAthlete);
   </script>
 </body>
 </html>
