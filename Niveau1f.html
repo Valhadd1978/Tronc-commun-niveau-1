@@ -100,8 +100,7 @@
       <!-- JS will populate rows here -->
     </tbody>
   </table>
-  <script>
-    // --- Firebase config ---
+    <script>
     const firebaseConfig = {
       apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
       authDomain: "tronc-commun-niveau-1.firebaseapp.com",
@@ -111,12 +110,12 @@
       messagingSenderId: "360067485567",
       appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
     };
+    if (window.firebase && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = (window.firebase && firebase.database) ? firebase.database() : null;
+    const DB_PATH = 'niveau1';
 
-    // Initialize Firebase (using compat syntax!)
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // Define your checklist items
     const checklist = [
       [
         "1. Comprendre comment exécuter un entraînement.", 
@@ -138,77 +137,94 @@
       ],
     ];
 
-    // Generate table
+    // ── Build UI ──────────────────────────────────────────────────────
     const tableBody = document.getElementById('tableBody');
-
     function createRow(rowIdx) {
       const tr = document.createElement('tr');
       for (let colIdx = 0; colIdx < 4; colIdx++) {
         const td = document.createElement('td');
-        td.id = `cell-${rowIdx}-${colIdx}`;
+        td.id = 'cell-' + rowIdx + '-' + colIdx;
         const itemText = checklist[rowIdx][colIdx];
-
         if (itemText) {
-          // Switch
           const label = document.createElement('label');
-          label.className = "switch";
+          label.className = 'switch';
           const input = document.createElement('input');
-          input.type = "checkbox";
-          input.id = `toggle-${rowIdx}-${colIdx}`;
+          input.type = 'checkbox';
+          input.id = 'toggle-' + rowIdx + '-' + colIdx;
           const span = document.createElement('span');
-          span.className = "slider";
+          span.className = 'slider';
           label.appendChild(input);
           label.appendChild(span);
           td.appendChild(label);
-
-          // Label text
           const text = document.createElement('span');
-          text.className = "label-text";
+          text.className = 'label-text';
           text.textContent = itemText;
           td.appendChild(text);
 
-          // Event
-          input.addEventListener('change', function() {
-            updateItem(rowIdx, colIdx, input.checked);
-          });
+          input.addEventListener('change', (function(r, c, inp) {
+            return function() {
+              const _a = localStorage.getItem('selectedAthlete');
+              if (!_a || !db) return;
+              db.ref(DB_PATH + '/' + _a + '/' + r + '/' + c).set(inp.checked);
+            };
+          })(rowIdx, colIdx, input));
         } else {
-          td.textContent = "";
+          td.textContent = '';
         }
         tr.appendChild(td);
       }
       return tr;
     }
-
-    // Render all rows
     for (let row = 0; row < checklist.length; row++) {
       tableBody.appendChild(createRow(row));
     }
 
-    // Firebase: Listen for updates (NIVEAU 1 PATH)
-    db.ref('niveau1').on('value', (snapshot) => {
-      const data = snapshot.val() || {};
+    // ── Athlete listener management ───────────────────────────────────
+    let _activeAthlete = null;
+    let _fbListener   = null;
+
+    function _resetUI() {
       for (let row = 0; row < checklist.length; row++) {
         for (let col = 0; col < 4; col++) {
-          const itemText = checklist[row][col];
-          if (itemText) {
-            const checked = data?.[row]?.[col] || false;
-            const box = document.getElementById(`toggle-${row}-${col}`);
-            const td = document.getElementById(`cell-${row}-${col}`);
-            box.checked = checked;
-            if (checked) {
-              td.classList.add('achieved');
-            } else {
-              td.classList.remove('achieved');
-            }
-          }
+          if (!checklist[row][col]) continue;
+          const b = document.getElementById('toggle-' + row + '-' + col);
+          const t = document.getElementById('cell-'   + row + '-' + col);
+          if (b) b.checked = false;
+          if (t) t.classList.remove('achieved');
         }
       }
-    });
-
-    // Update Firebase when toggled (NIVEAU 1 PATH)
-    function updateItem(row, col, value) {
-      db.ref(`niveau1/${row}/${col}`).set(value);
     }
+
+    function _checkAthlete() {
+      const aid = localStorage.getItem('selectedAthlete') || null;
+      if (aid === _activeAthlete) return;
+      if (_fbListener && _activeAthlete && db)
+        db.ref(DB_PATH + '/' + _activeAthlete).off('value', _fbListener);
+      _fbListener = null;
+      _resetUI();
+      _activeAthlete = aid;
+      if (!aid || !db) return;
+      _fbListener = db.ref(DB_PATH + '/' + aid).on('value', function(snap) {
+        const data = snap.val() || {};
+        for (let row = 0; row < checklist.length; row++) {
+          for (let col = 0; col < 4; col++) {
+            if (!checklist[row][col]) continue;
+            const checked = !!(data[row] && data[row][col]);
+            const b = document.getElementById('toggle-' + row + '-' + col);
+            const t = document.getElementById('cell-'   + row + '-' + col);
+            if (b) b.checked = checked;
+            if (t) checked ? t.classList.add('achieved') : t.classList.remove('achieved');
+          }
+        }
+      });
+    }
+
+    window.addEventListener('load',          _checkAthlete);
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) _checkAthlete();
+    });
+    window.addEventListener('pageshow',      _checkAthlete);
+    window.addEventListener('focus',         _checkAthlete);
   </script>
 </body>
 </html>

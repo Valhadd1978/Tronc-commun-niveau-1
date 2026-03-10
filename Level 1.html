@@ -57,7 +57,7 @@
       <tbody id="tableBody"></tbody>
     </table>
   </div>
-  <script>
+    <script>
     const firebaseConfig = {
       apiKey: "AIzaSyA5Ukj0aqRtNTrHMpAm6kbgfXF-ivuXhNU",
       authDomain: "tronc-commun-niveau-1.firebaseapp.com",
@@ -67,8 +67,12 @@
       messagingSenderId: "360067485567",
       appId: "1:360067485567:web:cab04e01bf4622b5e4144a"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    if (window.firebase && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = (window.firebase && firebase.database) ? firebase.database() : null;
+    const DB_PATH = 'niveau1';
+
     const checklist = [
       [
         "1. Understand how to execute a training session.",
@@ -89,9 +93,9 @@
         "3. Sign the consent form."
       ],
     ];
-    let currentListener = null;
-    let currentAthleteId = null;
-    const tableBody = document.getElementById('tableBody');
+
+    // ── Build UI ──────────────────────────────────────────────────────
+    const tableBody    = document.getElementById('tableBody');
     const tableWrapper = document.getElementById('table-wrapper');
     function buildTable() {
       tableBody.innerHTML = '';
@@ -99,68 +103,98 @@
         const tr = document.createElement('tr');
         for (let col = 0; col < 4; col++) {
           const td = document.createElement('td');
-          td.id = `cell-${row}-${col}`;
+          td.id = 'cell-' + row + '-' + col;
           const itemText = checklist[row][col];
           if (itemText) {
             const label = document.createElement('label');
-            label.className = "switch";
+            label.className = 'switch';
             const input = document.createElement('input');
-            input.type = "checkbox";
-            input.id = `toggle-${row}-${col}`;
+            input.type = 'checkbox';
+            input.id = 'toggle-' + row + '-' + col;
             const span = document.createElement('span');
-            span.className = "slider";
+            span.className = 'slider';
             label.appendChild(input);
             label.appendChild(span);
             td.appendChild(label);
             const text = document.createElement('span');
-            text.className = "label-text";
+            text.className = 'label-text';
             text.textContent = itemText;
             td.appendChild(text);
-            input.addEventListener('change', function() {
-              db.ref(`niveau1/${currentAthleteId}/${row}/${col}`).set(input.checked);
-            });
+
+            input.addEventListener('change', (function(r, c, inp) {
+              return function() {
+                const _a = localStorage.getItem('selectedAthlete');
+                if (!_a || !db) return;
+                db.ref(DB_PATH + '/' + _a + '/' + r + '/' + c).set(inp.checked);
+              };
+            })(row, col, input));
           }
           tr.appendChild(td);
         }
         tableBody.appendChild(tr);
       }
     }
-    function loadAthlete(athleteId) {
-      if (currentListener && currentAthleteId) {
-        db.ref(`niveau1/${currentAthleteId}`).off('value', currentListener);
-      }
-      currentAthleteId = athleteId;
+    buildTable();
+
+    // ── Athlete listener management ───────────────────────────────────
+    let _activeAthlete = null;
+    let _fbListener   = null;
+
+    function _resetUI() {
       for (let row = 0; row < checklist.length; row++) {
         for (let col = 0; col < 4; col++) {
-          if (checklist[row][col]) {
-            const box = document.getElementById(`toggle-${row}-${col}`);
-            const td = document.getElementById(`cell-${row}-${col}`);
-            if (box) box.checked = false;
-            if (td) td.classList.remove('achieved');
-          }
+          if (!checklist[row][col]) continue;
+          const b = document.getElementById('toggle-' + row + '-' + col);
+          const t = document.getElementById('cell-'   + row + '-' + col);
+          if (b) b.checked = false;
+          if (t) t.classList.remove('achieved');
         }
       }
-      currentListener = db.ref(`niveau1/${athleteId}`).on('value', (snapshot) => {
-        const data = snapshot.val() || {};
+    }
+
+    function _checkAthlete() {
+      const aid = localStorage.getItem('selectedAthlete') || null;
+      // Keep dropdown in sync with localStorage
+      const sel = document.getElementById('athlete-select');
+      if (sel && sel.value !== (aid || '')) sel.value = aid || '';
+      if (aid) tableWrapper.style.display = 'block';
+      else     tableWrapper.style.display = 'none';
+      if (aid === _activeAthlete) return;
+      if (_fbListener && _activeAthlete && db)
+        db.ref(DB_PATH + '/' + _activeAthlete).off('value', _fbListener);
+      _fbListener = null;
+      _resetUI();
+      _activeAthlete = aid;
+      if (!aid || !db) return;
+      _fbListener = db.ref(DB_PATH + '/' + aid).on('value', function(snap) {
+        const data = snap.val() || {};
         for (let row = 0; row < checklist.length; row++) {
           for (let col = 0; col < 4; col++) {
-            if (checklist[row][col]) {
-              const checked = data?.[row]?.[col] || false;
-              const box = document.getElementById(`toggle-${row}-${col}`);
-              const td = document.getElementById(`cell-${row}-${col}`);
-              if (box) box.checked = checked;
-              if (td) { checked ? td.classList.add('achieved') : td.classList.remove('achieved'); }
-            }
+            if (!checklist[row][col]) continue;
+            const checked = !!(data[row] && data[row][col]);
+            const b = document.getElementById('toggle-' + row + '-' + col);
+            const t = document.getElementById('cell-'   + row + '-' + col);
+            if (b) b.checked = checked;
+            if (t) checked ? t.classList.add('achieved') : t.classList.remove('achieved');
           }
         }
       });
     }
-    buildTable();
+
+    // Dropdown also writes to localStorage so other checklist pages stay in sync
     document.getElementById('athlete-select').addEventListener('change', function() {
       const val = this.value;
-      if (val) { tableWrapper.style.display = 'block'; loadAthlete(val); }
-      else { tableWrapper.style.display = 'none'; }
+      if (val) localStorage.setItem('selectedAthlete', val);
+      else     localStorage.removeItem('selectedAthlete');
+      _checkAthlete();
     });
+
+    window.addEventListener('load',          _checkAthlete);
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) _checkAthlete();
+    });
+    window.addEventListener('pageshow',      _checkAthlete);
+    window.addEventListener('focus',         _checkAthlete);
   </script>
 </body>
 </html>
